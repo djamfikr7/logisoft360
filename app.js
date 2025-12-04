@@ -721,27 +721,27 @@ class Logisoft360App {
 
     renderSales() {
         return `
-    < div class="dashboard-header animate-fade-in" >
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1>${this.t('sales.title')}</h1>
-                <p class="text-muted">${this.t('sales.subtitle')}</p>
+            <div class="dashboard-header animate-fade-in">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>${this.t('sales.title')}</h1>
+                        <p class="text-muted">${this.t('sales.subtitle')}</p>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn" onclick="app.renderBonDeRoute()" style="background: var(--bg-base); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">
+                            🚚 ${this.t('btn.route')}
+                        </button>
+                        <button class="btn" style="background: var(--bg-base); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">
+                            📄 ${this.t('sales.quote')}
+                        </button>
+                        <button class="btn btn-primary">
+                            <span>➕</span> ${this.t('sales.new')}
+                        </button>
+                    </div>
+                </div>
             </div>
-            <div style="display: flex; gap: 1rem;">
-                <button class="btn" onclick="app.renderBonDeRoute()" style="background: var(--bg-base); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">
-                    🚚 ${this.t('btn.route')}
-                </button>
-                <button class="btn" style="background: var(--bg-base); box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">
-                    📄 ${this.t('sales.quote')}
-                </button>
-                <button class="btn btn-primary">
-                    <span>➕</span> ${this.t('sales.new')}
-                </button>
-            </div>
-        </div>
-            </div >
 
-            < !--Sales Stats-- >
+            <!-- Sales Stats -->
             <div class="grid grid-4 mb-3 animate-fade-in">
                 <div class="stat-card">
                     <div class="stat-icon" style="color: var(--accent-success);">💰</div>
@@ -765,34 +765,34 @@ class Logisoft360App {
                 </div>
             </div>
 
-            <!--Invoices Table-- >
-    <div class="neo-outset p-4 animate-fade-in" style="padding: 2rem;">
-        <div class="d-flex justify-content-between align-items-center mb-3" style="display: flex; justify-content: space-between; margin-bottom: 1.5rem;">
-            <div style="display: flex; gap: 1rem; align-items: center;">
-                <h2 style="font-size: 1.5rem; color: var(--text-primary);">Historique des Factures</h2>
-                <span class="badge badge-secondary">2025</span>
-            </div>
-            <div style="display: flex; gap: 1rem;">
-                <input type="text" placeholder="Rechercher facture..." style="border: none; background: transparent; padding: 0.5rem; width: 200px; outline: none; border-bottom: 1px solid var(--text-muted);">
-            </div>
-        </div>
+            <!-- Invoices Table -->
+            <div class="neo-outset p-4 animate-fade-in" style="padding: 2rem;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 1.5rem;">
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <h2 style="font-size: 1.5rem; color: var(--text-primary);">Historique des Factures</h2>
+                        <span class="badge badge-secondary">2025</span>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <input type="text" placeholder="Rechercher facture..." class="neo-inset" style="border: none; background: var(--bg-inset); padding: 0.75rem 1rem; border-radius: 10px; width: 200px; outline: none; color: var(--text-primary);">
+                    </div>
+                </div>
 
-        <div class="table-container">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>${this.t('table.invoice')}</th>
-                        <th>${this.t('table.client')}</th>
-                        <th>${this.t('table.date')}</th>
-                        <th>${this.t('table.amount')}</th>
-                        <th>${this.t('table.tva')}</th>
-                        <th>${this.t('table.total')}</th>
-                        <th>${this.t('table.status')}</th>
-                        <th>${this.t('table.actions')}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${this.data.recentInvoices.map(inv => `
+                <div class="table-container">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>${this.t('table.invoice')}</th>
+                                <th>${this.t('table.client')}</th>
+                                <th>${this.t('table.date')}</th>
+                                <th>${this.t('table.amount')}</th>
+                                <th>${this.t('table.tva')}</th>
+                                <th>${this.t('table.total')}</th>
+                                <th>${this.t('table.status')}</th>
+                                <th>${this.t('table.actions')}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${this.data.recentInvoices.map(inv => `
                                 <tr>
                                     <td><strong>${inv.id}</strong></td>
                                     <td>${inv.client}</td>
@@ -805,7 +805,7 @@ class Logisoft360App {
                                         <div style="display: flex; gap: 0.5rem;">
                                             ${(inv.paymentStatus || inv.status) !== 'Payée' && (inv.paymentStatus || inv.status) !== 'paid' ?
                 `<button class="btn" onclick="app.showEditInvoiceModal('${inv.id}')" title="Modifier Facture" style="padding: 0.25rem; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); color: var(--accent-warning);">✏️</button>
-                 <button class="btn" onclick="app.showPaymentModal('${inv.id}')" title="Enregistrer Paiement" style="padding: 0.25rem; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); color: var(--accent-success);">💵</button>` : ''
+                                                <button class="btn" onclick="app.showPaymentModal('${inv.id}')" title="Enregistrer Paiement" style="padding: 0.25rem; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light); color: var(--accent-success);">💵</button>` : ''
             }
                                             <button class="btn" onclick="app.showDeliveryModal('${inv.id}')" title="Générer Étiquette" style="padding: 0.25rem; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">🏷️</button>
                                             <button class="btn" onclick="app.generateBonDeLivraison('${inv.id}')" title="Bon de Livraison" style="padding: 0.25rem; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">📦</button>
@@ -815,28 +815,28 @@ class Logisoft360App {
                                     </td>
                                 </tr>
                             `).join('')}
-                </tbody>
-            </table>
-        </div>
-    </div>
-`;
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
     }
 
     renderCustomers() {
         return `
-    < div class="dashboard-header animate-fade-in" >
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1>Gestion Clients</h1>
-                <p class="text-muted">Base de données et fidélité</p>
+            <div class="dashboard-header animate-fade-in">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>Gestion Clients</h1>
+                        <p class="text-muted">Base de données et fidélité</p>
+                    </div>
+                    <button class="btn btn-primary">
+                        <span>➕</span> Nouveau Client
+                    </button>
+                </div>
             </div>
-            <button class="btn btn-primary">
-                <span>➕</span> Nouveau Client
-            </button>
-        </div>
-        </div>
 
-        <!-- Customer Stats -->
+            <!-- Customer Stats -->
             <div class="grid grid-4 mb-3 animate-fade-in">
                 <div class="stat-card">
                     <div class="stat-icon" style="color: var(--accent-primary);">👥</div>
@@ -884,8 +884,8 @@ class Logisoft360App {
                         </button>
                     </div>
                 `).join('')}
-    </div>
-`;
+            </div>
+        `;
     }
 
     // ============================================

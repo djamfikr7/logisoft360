@@ -52,9 +52,10 @@ class Logisoft360App {
             const content = document.getElementById('mainContent');
             if (content) content.innerHTML = '<div class="loading" style="text-align:center; padding: 2rem;">Chargement...</div>';
 
-            const [productsData, invoicesData] = await Promise.all([
+            const [productsData, invoicesData, customersData] = await Promise.all([
                 api.getProducts(),
-                api.getInvoices()
+                api.getInvoices(),
+                api.getCustomers().catch(() => []) // Fallback if customers API fails
             ]);
 
             // Transform product fields from backend format to frontend format
@@ -64,7 +65,10 @@ class Logisoft360App {
                 stock: p.stockQuantity || 0,
                 minStock: p.minStockLevel || 0,
                 category: p.category?.name || p.description?.split(' ')[0] || 'Électronique',
-                status: p.stockQuantity <= p.minStockLevel ? 'Stock Faible' : 'En Stock'
+                status: p.isLowStock ? 'Stock Faible' : 'En Stock',
+                expiryStatus: p.expiryStatus,
+                expiryDate: p.expiryDate ? new Date(p.expiryDate).toLocaleDateString('fr-FR') : null,
+                batchNumber: p.batchNumber
             }));
 
             // Transform invoice fields from backend format to frontend format
@@ -72,22 +76,35 @@ class Logisoft360App {
                 ...inv,
                 id: inv.invoiceNumber || inv.id,
                 client: inv.customer?.companyName || inv.customer?.fullName || 'Client',
+                customerId: inv.customerId,
                 date: new Date(inv.invoiceDate).toLocaleDateString('fr-FR'),
                 amount: Number(inv.subtotal) || 0,
                 tva: Number(inv.tvaAmount) || 0,
                 total: Number(inv.totalAmount) || 0,
+                discount: Number(inv.discountAmount) || 0,
                 status: this.translateStatus(inv.paymentStatus || inv.status)
+            }));
+
+            // Transform customer fields from backend format to frontend format
+            const customers = (customersData || []).map(c => ({
+                ...c,
+                name: c.companyName || c.fullName,
+                tier: c.loyaltyTier,
+                points: c.loyaltyPoints || 0,
+                totalSpent: Number(c.totalSpent) || 0,
+                phone: c.phone,
+                city: c.wilaya
             }));
 
             this.data = {
                 products,
                 recentInvoices: invoices,
-                customers: this.mockData.customers, // Keep mock customers for now until API ready
+                customers: customers.length > 0 ? customers : this.mockData.customers,
                 stats: this.calculateStats(products, invoices)
             };
 
-            // Fallback if empty (for demo)
-            if (this.data.products.length === 0) {
+            // If all empty, use mock data for demo
+            if (this.data.products.length === 0 && this.data.customers.length === 0) {
                 console.log('API returned empty, using mock data');
                 this.data = this.initMockData();
             }
@@ -97,6 +114,7 @@ class Logisoft360App {
             this.data = this.initMockData();
         }
     }
+
 
     translateStatus(status) {
         const statusMap = {

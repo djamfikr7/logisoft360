@@ -54,6 +54,14 @@ const api = {
         return this.request(`/products/barcode/${code}`);
     },
 
+    async getExpiringProducts(days = 30) {
+        return this.request(`/products/expiring?days=${days}`);
+    },
+
+    async getLowStockProducts() {
+        return this.request('/products/low-stock');
+    },
+
     async createProduct(productData) {
         return this.request('/products', 'POST', productData);
     },
@@ -64,6 +72,43 @@ const api = {
 
     async deleteProduct(id) {
         return this.request(`/products/${id}`, 'DELETE');
+    },
+
+    async adjustStock(id, adjustment, reason) {
+        return this.request(`/products/${id}/adjust-stock`, 'POST', { adjustment, reason });
+    },
+
+    // Customers
+    async getCustomers() {
+        return this.request('/customers');
+    },
+
+    async getCustomerById(id) {
+        return this.request(`/customers/${id}`);
+    },
+
+    async getCustomersWithDebt() {
+        return this.request('/customers/with-debt');
+    },
+
+    async createCustomer(customerData) {
+        return this.request('/customers', 'POST', customerData);
+    },
+
+    async updateCustomer(id, customerData) {
+        return this.request(`/customers/${id}`, 'PUT', customerData);
+    },
+
+    async deleteCustomer(id) {
+        return this.request(`/customers/${id}`, 'DELETE');
+    },
+
+    async getCustomerHistory(id) {
+        return this.request(`/customers/${id}/history`);
+    },
+
+    async updateLoyaltyPoints(id, points, action) {
+        return this.request(`/customers/${id}/points`, 'POST', { points, action });
     },
 
     // Invoices
@@ -114,7 +159,6 @@ const api = {
         const response = await fetch(`${API_URL}${endpoint}`, config);
 
         if (response.status === 401) {
-            // Token expired or invalid
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             window.location.reload();
@@ -136,4 +180,5 @@ const api = {
 
 // Expose to window
 window.api = api;
+
 

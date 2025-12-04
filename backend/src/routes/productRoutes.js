@@ -6,9 +6,17 @@ const {
     createProduct,
     updateProduct,
     deleteProduct,
-    getProductByBarcode
+    getProductByBarcode,
+    getExpiringProducts,
+    getLowStockProducts,
+    adjustStock
 } = require('../controllers/productController');
 const { protect, admin } = require('../middleware/authMiddleware');
+
+// Special routes (must be before :id routes)
+router.get('/expiring', protect, getExpiringProducts);
+router.get('/low-stock', protect, getLowStockProducts);
+router.get('/barcode/:code', protect, getProductByBarcode);
 
 router.route('/')
     .get(protect, getProducts)
@@ -19,6 +27,7 @@ router.route('/:id')
     .put(protect, admin, updateProduct)
     .delete(protect, admin, deleteProduct);
 
-router.get('/barcode/:code', protect, getProductByBarcode);
+router.post('/:id/adjust-stock', protect, admin, adjustStock);
 
 module.exports = router;
+

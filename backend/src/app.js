@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const morgan = require('morgan'); // You might need to install morgan if not already
+const morgan = require('morgan');
 const { errorHandler } = require('./middleware/errorMiddleware');
 
 // Import routes
@@ -8,7 +8,8 @@ const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
 const invoiceRoutes = require('./routes/invoiceRoutes');
 const deliveryRoutes = require('./routes/deliveryRoutes');
-// Add other routes as needed
+const customerRoutes = require('./routes/customerRoutes');
+// Add credit note routes when ready
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/products', productRoutes);
 app.use('/api/v1/invoices', invoiceRoutes);
 app.use('/api/v1/deliveries', deliveryRoutes);
+app.use('/api/v1/customers', customerRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
@@ -36,3 +38,4 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 module.exports = app;
+

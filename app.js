@@ -52,16 +52,38 @@ class Logisoft360App {
             const content = document.getElementById('mainContent');
             if (content) content.innerHTML = '<div class="loading" style="text-align:center; padding: 2rem;">Chargement...</div>';
 
-            const [products, invoices] = await Promise.all([
+            const [productsData, invoicesData] = await Promise.all([
                 api.getProducts(),
                 api.getInvoices()
             ]);
 
+            // Transform product fields from backend format to frontend format
+            const products = (productsData || []).map(p => ({
+                ...p,
+                price: Number(p.salePrice) || 0,
+                stock: p.stockQuantity || 0,
+                minStock: p.minStockLevel || 0,
+                category: p.category?.name || p.description?.split(' ')[0] || 'Électronique',
+                status: p.stockQuantity <= p.minStockLevel ? 'Stock Faible' : 'En Stock'
+            }));
+
+            // Transform invoice fields from backend format to frontend format
+            const invoices = (invoicesData || []).map(inv => ({
+                ...inv,
+                id: inv.invoiceNumber || inv.id,
+                client: inv.customer?.companyName || inv.customer?.fullName || 'Client',
+                date: new Date(inv.invoiceDate).toLocaleDateString('fr-FR'),
+                amount: Number(inv.subtotal) || 0,
+                tva: Number(inv.tvaAmount) || 0,
+                total: Number(inv.totalAmount) || 0,
+                status: this.translateStatus(inv.paymentStatus || inv.status)
+            }));
+
             this.data = {
-                products: products || [],
-                recentInvoices: invoices || [],
+                products,
+                recentInvoices: invoices,
                 customers: this.mockData.customers, // Keep mock customers for now until API ready
-                stats: this.calculateStats(products || [], invoices || [])
+                stats: this.calculateStats(products, invoices)
             };
 
             // Fallback if empty (for demo)
@@ -75,6 +97,20 @@ class Logisoft360App {
             this.data = this.initMockData();
         }
     }
+
+    translateStatus(status) {
+        const statusMap = {
+            'pending': 'En attente',
+            'partial': 'Partiel',
+            'paid': 'Payée',
+            'overdue': 'En retard',
+            'cancelled': 'Annulée',
+            'draft': 'Brouillon',
+            'sent': 'Envoyée'
+        };
+        return statusMap[status] || status;
+    }
+
 
     calculateStats(products, invoices) {
         const totalRevenue = invoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);

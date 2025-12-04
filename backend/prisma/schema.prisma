@@ -1,0 +1,384 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  username      String    @unique
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  fullName      String    @map("full_name")
+  role          UserRole
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLogin     DateTime? @map("last_login")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  sessions      UserSession[]
+  invoices      Invoice[]
+  payments      Payment[]
+  activityLogs  ActivityLog[]
+  stockMovements StockMovement[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  admin
+  manager
+  cashier
+  viewer
+}
+
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @map("token_hash")
+ ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String
+  parentId  String?  @map("parent_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id             String    @id @default(uuid())
+  sku            String    @unique
+  barcode        String?   @unique
+  name           String
+  description    String?
+  categoryId     String?   @map("category_id")
+  costPrice      Decimal   @map("cost_price") @db.Decimal(12, 2)
+  salePrice      Decimal   @map("sale_price") @db.Decimal(12, 2)
+  stockQuantity  Int       @default(0) @map("stock_quantity")
+  minStockLevel  Int       @default(5) @map("min_stock_level")
+  maxStockLevel  Int?      @map("max_stock_level")
+  tvaRate        Decimal   @default(19.00) @map("tva_rate") @db.Decimal(5, 2)
+  batchNumber    String?   @map("batch_number")
+  serialNumber   String?   @map("serial_number")
+  expiryDate     DateTime? @map("expiry_date")
+  isActive       Boolean   @default(true) @map("is_active")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  category       Category?        @relation(fields: [categoryId], references: [id])
+  stockMovements StockMovement[]
+  invoiceItems   InvoiceItem[]
+
+  @@index([barcode])
+  @@index([sku])
+  @@map("products")
+}
+
+model StockMovement {
+  id            String   @id @default(uuid())
+  productId     String   @map("product_id")
+  type          StockMovementType
+  quantity      Int
+  referenceType String?  @map("reference_type")
+  referenceId   String?  @map("reference_id")
+  notes         String?
+  userId        String?  @map("user_id")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  product Product @relation(fields: [productId], references: [id])
+  user    User?   @relation(fields: [userId], references: [id])
+
+  @@index([productId])
+  @@map("stock_movements")
+}
+
+enum StockMovementType {
+  in
+  out
+  adjustment
+  return
+}
+
+model Customer {
+  id            String   @id @default(uuid())
+  customerType  CustomerType @map("customer_type")
+  fullName      String   @map("full_name")
+  companyName   String?  @map("company_name")
+  nif           String?  @unique
+  nis           String?
+  rc            String?
+  email         String?
+  phone         String
+  mobile        String?
+  addressLine1  String?  @map("address_line1")
+  addressLine2  String?  @map("address_line2")
+  commune       String?
+  daira         String?
+  wilaya        String
+  postalCode    String?  @map("postal_code")
+  creditLimit   Decimal  @default(0) @map("credit_limit") @db.Decimal(12, 2)
+  currentBalance Decimal @default(0) @map("current_balance") @db.Decimal(12, 2)
+  loyaltyTier   LoyaltyTier @default(Bronze) @map("loyalty_tier")
+  loyaltyPoints Int      @default(0) @map("loyalty_points")
+  totalSpent    Decimal  @default(0) @map("total_spent") @db.Decimal(12, 2)
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  invoices   Invoice[]
+  payments   Payment[]
+  deliveries Delivery[]
+
+  @@index([nif])
+  @@index([phone])
+  @@index([wilaya])
+  @@map("customers")
+}
+
+enum CustomerType {
+  individual
+  company
+}
+
+enum LoyaltyTier {
+  Bronze
+  Silver
+  Gold
+  Platinum
+}
+
+model Invoice {
+  id              String   @id @default(uuid())
+  invoiceNumber   String   @unique @map("invoice_number")
+  customerId      String   @map("customer_id")
+  subtotal        Decimal  @db.Decimal(12, 2)
+  tvaAmount       Decimal  @map("tva_amount") @db.Decimal(12, 2)
+  discountAmount  Decimal  @default(0) @map("discount_amount") @db.Decimal(12, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(12, 2)
+  paymentStatus   PaymentStatus @default(pending) @map("payment_status")
+  paidAmount      Decimal  @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  invoiceDate     DateTime @default(now()) @map("invoice_date") @db.Date
+  dueDate         DateTime? @map("due_date") @db.Date
+  proformaNumber  String?  @map("proforma_number")
+  bonDeRouteId    String?  @map("bon_de_route_id")
+  status          InvoiceStatus @default(draft)
+  notes           String?
+  createdBy       String?  @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  customer Customer       @relation(fields: [customerId], references: [id])
+  creator  User?          @relation(fields: [createdBy], references: [id])
+  items    InvoiceItem[]
+  payments Payment[]
+  deliveries Delivery[]
+
+  @@index([customerId])
+  @@index([invoiceNumber])
+  @@index([paymentStatus])
+  @@index([invoiceDate])
+  @@map("invoices")
+}
+
+enum PaymentStatus {
+  pending
+  partial
+  paid
+  overdue
+  cancelled
+}
+
+enum InvoiceStatus {
+  draft
+  sent
+  paid
+  cancelled
+}
+
+model InvoiceItem {
+  id              String  @id @default(uuid())
+  invoiceId       String  @map("invoice_id")
+  productId       String  @map("product_id")
+  productName     String  @map("product_name")
+  productSku      String? @map("product_sku")
+  quantity        Int
+  unitPrice       Decimal @map("unit_price") @db.Decimal(12, 2)
+  tvaRate         Decimal @map("tva_rate") @db.Decimal(5, 2)
+  discountPercent Decimal @default(0) @map("discount_percent") @db.Decimal(5, 2)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("invoice_items")
+}
+
+model Payment {
+  id              String        @id @default(uuid())
+  paymentNumber   String        @unique @map("payment_number")
+  invoiceId       String        @map("invoice_id")
+  customerId      String        @map("customer_id")
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentMethod   PaymentMethod @map("payment_method")
+  paymentDate     DateTime      @default(now()) @map("payment_date") @db.Date
+  referenceNumber String?       @map("reference_number")
+  bankName        String?       @map("bank_name")
+  checkNumber     String?       @map("check_number")
+  notes           String?
+  receiptGenerated Boolean      @default(false) @map("receipt_generated")
+  receiptPath     String?       @map("receipt_path")
+  createdBy       String?       @map("created_by")
+  createdAt       DateTime      @default(now()) @map("created_at")
+
+  invoice  Invoice  @relation(fields: [invoiceId], references: [id])
+  customer Customer @relation(fields: [customerId], references: [id])
+  creator  User?    @relation(fields: [createdBy], references: [id])
+
+  @@index([invoiceId])
+  @@index([customerId])
+  @@index([paymentDate])
+  @@map("payments")
+}
+
+enum PaymentMethod {
+  cash
+  card
+  check
+  bank_transfer
+  mobile_payment
+}
+
+model Delivery {
+  id              String         @id @default(uuid())
+  trackingNumber  String         @unique @map("tracking_number")
+  invoiceId       String         @map("invoice_id")
+  customerId      String         @map("customer_id")
+  deliveryMethod  DeliveryMethod @map("delivery_method")
+  driverName      String?        @map("driver_name")
+  vehicleNumber   String?        @map("vehicle_number")
+  deliveryAddress String         @map("delivery_address")
+  commune         String?
+  wilaya          String
+  postalCode      String?        @map("postal_code")
+  contactPhone    String?        @map("contact_phone")
+  isCod           Boolean        @default(false) @map("is_cod")
+  codAmount       Decimal?       @map("cod_amount") @db.Decimal(12, 2)
+  codCollected    Boolean        @default(false) @map("cod_collected")
+  status          DeliveryStatus @default(pending)
+  scheduledDate   DateTime?      @map("scheduled_date") @db.Date
+  pickedUpAt      DateTime?      @map("picked_up_at")
+  deliveredAt     DateTime?      @map("delivered_at")
+  signatureImage  String?        @map("signature_image")
+  deliveryPhoto   String?        @map("delivery_photo")
+  deliveryNotes   String?        @map("delivery_notes")
+  labelGenerated  Boolean        @default(false) @map("label_generated")
+  labelPath       String?        @map("label_path")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  invoice       Invoice                @relation(fields: [invoiceId], references: [id])
+  customer      Customer               @relation(fields: [customerId], references: [id])
+  statusHistory DeliveryStatusHistory[]
+
+  @@index([trackingNumber])
+  @@index([invoiceId])
+  @@index([status])
+  @@index([wilaya])
+  @@map("deliveries")
+}
+
+enum DeliveryMethod {
+  own_fleet
+  yalidine
+  algerie_poste
+  zr_express
+  procolis
+}
+
+enum DeliveryStatus {
+  pending
+  picked_up
+  in_transit
+  out_for_delivery
+  delivered
+  failed
+  returned
+}
+
+model DeliveryStatusHistory {
+  id         String   @id @default(uuid())
+  deliveryId String   @map("delivery_id")
+  status     DeliveryStatus
+  notes      String?
+  location   String?
+  updatedBy  String?  @map("updated_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  delivery Delivery @relation(fields: [deliveryId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_status_history")
+}
+
+model Wilaya {
+  id               Int     @id
+  code             String
+  nameFr           String  @map("name_fr")
+  nameAr           String  @map("name_ar")
+  postalCodePrefix String? @map("postal_code_prefix")
+
+  communes Commune[]
+
+  @@map("wilayas")
+}
+
+model Commune {
+  id         String @id @default(uuid())
+  wilayaId   Int    @map("wilaya_id")
+  nameFr     String @map("name_fr")
+  nameAr     String @map("name_ar")
+  postalCode String? @map("postal_code")
+
+  wilaya Wilaya @relation(fields: [wilayaId], references: [id])
+
+  @@map("communes")
+}
+
+model ActivityLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  oldData    Json?    @map("old_data")
+  newData    Json?    @map("new_data")
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@map("activity_logs")
+}

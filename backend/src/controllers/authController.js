@@ -111,8 +111,101 @@ const getMe = async (req, res, next) => {
     }
 };
 
+// Generate reset token (simple implementation without email)
+const generateResetToken = () => {
+    return require('crypto').randomBytes(32).toString('hex');
+};
+
+// Store for reset tokens (in production, use Redis or database)
+const resetTokens = new Map();
+
+// @desc    Request password reset
+// @route   POST /api/v1/auth/forgot-password
+// @access  Public
+const forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+
+        const user = await prisma.user.findUnique({
+            where: { email }
+        });
+
+        if (!user) {
+            // Don't reveal if email exists for security
+            return res.json({
+                message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
+                // For demo purposes, we return the token directly
+                // In production, this would be sent via email
+            });
+        }
+
+        // Generate reset token
+        const resetToken = generateResetToken();
+        const expiresAt = Date.now() + 3600000; // 1 hour
+
+        // Store token (in production, store hashed token in database)
+        resetTokens.set(resetToken, {
+            userId: user.id,
+            expiresAt
+        });
+
+        // In production, send email with reset link
+        // For demo, we return the token directly
+        res.json({
+            message: 'Si cet email existe, un lien de réinitialisation a été envoyé.',
+            // Demo only - remove in production
+            resetToken,
+            resetUrl: `http://localhost:3000/reset-password?token=${resetToken}`
+        });
+    } catch (error) {
+        next(error);
+    }
+};
+
+// @desc    Reset password with token
+// @route   POST /api/v1/auth/reset-password
+// @access  Public
+const resetPassword = async (req, res, next) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        // Validate token
+        const tokenData = resetTokens.get(token);
+
+        if (!tokenData) {
+            res.status(400);
+            throw new Error('Token invalide ou expiré');
+        }
+
+        if (Date.now() > tokenData.expiresAt) {
+            resetTokens.delete(token);
+            res.status(400);
+            throw new Error('Token expiré');
+        }
+
+        // Hash new password
+        const salt = await bcrypt.genSalt(10);
+        const passwordHash = await bcrypt.hash(newPassword, salt);
+
+        // Update user password
+        await prisma.user.update({
+            where: { id: tokenData.userId },
+            data: { passwordHash }
+        });
+
+        // Remove used token
+        resetTokens.delete(token);
+
+        res.json({ message: 'Mot de passe réinitialisé avec succès' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     register,
     login,
-    getMe
+    getMe,
+    forgotPassword,
+    resetPassword
 };

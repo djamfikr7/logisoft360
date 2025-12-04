@@ -5,10 +5,11 @@ const {
     getInvoiceById,
     createInvoice,
     updateInvoice,
+    deleteInvoice,
     recordPayment,
     generatePDF
 } = require('../controllers/invoiceController');
-const { protect } = require('../middleware/authMiddleware');
+const { protect, admin } = require('../middleware/authMiddleware');
 
 router.route('/')
     .get(protect, getInvoices)
@@ -16,7 +17,8 @@ router.route('/')
 
 router.route('/:id')
     .get(protect, getInvoiceById)
-    .put(protect, updateInvoice);
+    .put(protect, updateInvoice)
+    .delete(protect, admin, deleteInvoice); // Admin only
 
 router.post('/:id/pay', protect, recordPayment);
 router.get('/:id/pdf', protect, generatePDF);

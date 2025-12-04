@@ -99,10 +99,13 @@ class Logisoft360App {
                         <label style="display: block; margin-bottom: 0.5rem;">Email</label>
                         <input type="email" id="email" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; background: var(--bg-inset); box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);" required>
                     </div>
-                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                    <div class="form-group" style="margin-bottom: 1rem;">
                         <label style="display: block; margin-bottom: 0.5rem;">Mot de passe</label>
                         <input type="password" id="password" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; background: var(--bg-inset); box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);" required>
                     </div>
+                    <p style="text-align: right; margin-bottom: 1rem;">
+                        <a href="#" onclick="app.showForgotPasswordModal(); return false;" style="font-size: 0.875rem;">Mot de passe oublié ?</a>
+                    </p>
                     <button type="submit" class="btn btn-primary" style="width: 100%;">Se connecter</button>
                 </form>
                 <p style="text-align: center; margin-top: 1rem;">
@@ -118,13 +121,91 @@ class Logisoft360App {
             const password = document.getElementById('password').value;
 
             try {
-                await api.login(email, password);
+                const data = await api.login(email, password);
+                this.currentUser = data; // Store user data including role
                 await this.loadInitialData();
                 this.loadPage('dashboard');
                 this.initAlertSystem();
                 this.checkAllAlerts();
             } catch (error) {
                 this.showToast('Échec de connexion: ' + error.message, 'danger');
+            }
+        });
+    }
+
+    showForgotPasswordModal() {
+        const modalHtml = `
+            <div class="login-container" style="max-width: 400px; margin: 100px auto; padding: 2rem; background: var(--bg-base); border-radius: 20px; box-shadow: 8px 8px 16px var(--shadow-dark);">
+                <h2 style="text-align: center; margin-bottom: 2rem; color: var(--accent-primary);">Réinitialiser le mot de passe</h2>
+                <form id="forgotPasswordForm">
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem;">Email</label>
+                        <input type="email" id="resetEmail" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; background: var(--bg-inset); box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Envoyer le lien</button>
+                </form>
+                <p style="text-align: center; margin-top: 1rem;">
+                    <a href="#" onclick="app.showLoginModal(); return false;">Retour à la connexion</a>
+                </p>
+            </div>
+        `;
+        document.getElementById('mainContent').innerHTML = modalHtml;
+
+        document.getElementById('forgotPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('resetEmail').value;
+
+            try {
+                const result = await api.forgotPassword(email);
+                this.showToast('Un lien de réinitialisation a été envoyé à votre email.', 'success');
+
+                // For demo: show the reset token
+                if (result.resetToken) {
+                    this.showResetPasswordModal(result.resetToken);
+                }
+            } catch (error) {
+                this.showToast('Erreur: ' + error.message, 'danger');
+            }
+        });
+    }
+
+    showResetPasswordModal(token) {
+        const modalHtml = `
+            <div class="login-container" style="max-width: 400px; margin: 100px auto; padding: 2rem; background: var(--bg-base); border-radius: 20px; box-shadow: 8px 8px 16px var(--shadow-dark);">
+                <h2 style="text-align: center; margin-bottom: 2rem; color: var(--accent-primary);">Nouveau mot de passe</h2>
+                <form id="resetPasswordForm">
+                    <input type="hidden" id="resetToken" value="${token}">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label style="display: block; margin-bottom: 0.5rem;">Nouveau mot de passe</label>
+                        <input type="password" id="newPassword" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; background: var(--bg-inset); box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);" required minlength="6">
+                    </div>
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label style="display: block; margin-bottom: 0.5rem;">Confirmer le mot de passe</label>
+                        <input type="password" id="confirmPassword" class="form-control" style="width: 100%; padding: 0.8rem; border-radius: 10px; border: none; background: var(--bg-inset); box-shadow: inset 2px 2px 5px var(--shadow-dark), inset -2px -2px 5px var(--shadow-light);" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">Réinitialiser</button>
+                </form>
+            </div>
+        `;
+        document.getElementById('mainContent').innerHTML = modalHtml;
+
+        document.getElementById('resetPasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const token = document.getElementById('resetToken').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+
+            if (newPassword !== confirmPassword) {
+                this.showToast('Les mots de passe ne correspondent pas', 'danger');
+                return;
+            }
+
+            try {
+                await api.resetPassword(token, newPassword);
+                this.showToast('Mot de passe réinitialisé avec succès !', 'success');
+                this.showLoginModal();
+            } catch (error) {
+                this.showToast('Erreur: ' + error.message, 'danger');
             }
         });
     }
@@ -533,20 +614,64 @@ class Logisoft360App {
                     <div class="stat-label">Créances en Attente</div>
                 </div>
                 <div class="stat-card">
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-            <div>
-                <h1>Gestion d'Inventaire</h1>
-                <p class="text-muted">Gérez vos produits et stocks</p>
+                    <div class="stat-icon" style="color: var(--accent-primary);">📦</div>
+                    <div class="stat-value">${this.data.stats.productsCount || this.data.products.length}</div>
+                    <div class="stat-label">Produits</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: var(--accent-secondary);">👥</div>
+                    <div class="stat-value">${this.data.customers?.length || 0}</div>
+                    <div class="stat-label">Clients</div>
+                </div>
             </div>
-            ${this.isAdmin() ? `
-            <button class="btn btn-primary">
-                <span>➕</span> Nouveau Produit
-            </button>
-            ` : ''}
-        </div>
-            </div >
 
-            < !--Filters -->
+            <!-- Quick Actions -->
+            <div class="neo-outset p-4 mb-3 animate-fade-in" style="padding: 2rem; margin-bottom: 2rem;">
+                <h2 style="margin-bottom: 1rem;">Actions Rapides</h2>
+                <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="app.loadPage('sales')">📝 Nouvelle Facture</button>
+                    <button class="btn" onclick="app.loadPage('inventory')">📦 Inventaire</button>
+                    <button class="btn" onclick="app.loadPage('customers')">👥 Clients</button>
+                    <button class="btn" onclick="app.loadPage('reports')">📊 Rapports</button>
+                </div>
+            </div>
+
+            <!-- Recent Products -->
+            <div class="neo-outset p-4 animate-fade-in" style="padding: 2rem;">
+                <h2 style="margin-bottom: 1rem;">Produits Récents</h2>
+                <div class="grid grid-4">
+                    ${this.data.products.slice(0, 4).map(product => `
+                        <div class="stat-card" style="padding: 1rem;">
+                            <h4 style="margin-bottom: 0.5rem;">${product.name}</h4>
+                            <p class="text-muted" style="font-size: 0.875rem;">${product.category || 'Non catégorisé'}</p>
+                            <div style="display: flex; justify-content: space-between; margin-top: 0.5rem;">
+                                <span style="font-weight: 700; color: var(--accent-secondary);">${this.formatCurrency(product.price)}</span>
+                                <span class="badge ${product.stock <= product.minStock ? 'badge-warning' : 'badge-success'}">${product.stock} en stock</span>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    renderInventory() {
+        return `
+            <div class="dashboard-header animate-fade-in">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h1>Gestion d'Inventaire</h1>
+                        <p class="text-muted">Gérez vos produits et stocks</p>
+                    </div>
+                    ${this.isAdmin() ? `
+                    <button class="btn btn-primary">
+                        <span>➕</span> Nouveau Produit
+                    </button>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Filters -->
             <div class="neo-inset p-3 mb-3 animate-fade-in" style="padding: 1.5rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center;">
                 <input type="text" placeholder="Rechercher un produit..." style="border: none; background: transparent; padding: 0.5rem; width: 300px; outline: none; color: var(--text-primary); font-family: var(--font-primary);">
                 <select style="border: none; background: transparent; padding: 0.5rem; outline: none; color: var(--text-primary); cursor: pointer;">
@@ -562,18 +687,20 @@ class Logisoft360App {
                 </select>
             </div>
 
-            <!--Product Grid-- >
-    <div class="grid grid-3 animate-fade-in">
-        ${this.data.products.map(product => `
+            <!-- Product Grid -->
+            <div class="grid grid-3 animate-fade-in">
+                ${this.data.products.map(product => `
                     <div class="stat-card" style="display: flex; flex-direction: column; gap: 1rem;">
                         <div style="display: flex; justify-content: space-between; align-items: start;">
-                            <div class="badge ${product.stock <= product.minStock ? 'badge-warning' : 'badge-success'}">${product.status}</div>
+                            <div class="badge ${product.stock <= product.minStock ? 'badge-warning' : 'badge-success'}">${product.status || 'En Stock'}</div>
+                            ${this.isAdmin() ? `
                             <button class="btn" style="padding: 0.25rem; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; box-shadow: 3px 3px 6px var(--shadow-dark), -3px -3px 6px var(--shadow-light);">⋮</button>
+                            ` : ''}
                         </div>
                         
                         <div>
                             <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.25rem;">${product.name}</h3>
-                            <p class="text-muted" style="font-size: 0.875rem;">${product.category}</p>
+                            <p class="text-muted" style="font-size: 0.875rem;">${product.category || 'Non catégorisé'}</p>
                         </div>
 
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: auto;">
@@ -588,8 +715,8 @@ class Logisoft360App {
                         </div>
                     </div>
                 `).join('')}
-    </div>
-`;
+            </div>
+        `;
     }
 
     renderSales() {

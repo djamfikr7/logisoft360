@@ -224,11 +224,48 @@ const generatePDF = async (req, res, next) => {
     res.json({ message: 'PDF generation not implemented yet' });
 };
 
+// @desc    Delete invoice
+// @route   DELETE /api/v1/invoices/:id
+// @access  Private/Admin
+const deleteInvoice = async (req, res, next) => {
+    try {
+        const invoice = await prisma.invoice.findUnique({
+            where: { id: req.params.id }
+        });
+
+        if (!invoice) {
+            res.status(404);
+            throw new Error('Invoice not found');
+        }
+
+        // Prevent deletion of paid invoices
+        if (invoice.paymentStatus === 'paid') {
+            res.status(400);
+            throw new Error('Cannot delete a paid invoice');
+        }
+
+        // Delete invoice items first (cascade should handle this but being explicit)
+        await prisma.invoiceItem.deleteMany({
+            where: { invoiceId: req.params.id }
+        });
+
+        // Delete invoice
+        await prisma.invoice.delete({
+            where: { id: req.params.id }
+        });
+
+        res.json({ message: 'Invoice deleted successfully' });
+    } catch (error) {
+        next(error);
+    }
+};
+
 module.exports = {
     getInvoices,
     getInvoiceById,
     createInvoice,
     updateInvoice,
+    deleteInvoice,
     recordPayment,
     generatePDF
 };
